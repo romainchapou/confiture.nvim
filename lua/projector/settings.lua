@@ -1,9 +1,9 @@
 local settings = {
-  -- src_folder to be added in read_configuration_file
-  build_folder = "./build", -- expressed relative to src_folder
+  -- src_folder to be set in read_configuration_file
+  run_command_in_term = "false",
 
   configure_command = "",
-  build_flags = "-j16 -C ${src_folder}/${build_folder}",
+  build_flags = "-j16 -C ${src_folder}",
   run_command = "",
 }
 

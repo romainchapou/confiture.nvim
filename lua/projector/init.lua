@@ -10,16 +10,25 @@ function projector.build()
 end
 
 function projector.run()
-  -- TODO launch nvim terminal running the executable, or simply launch the executable, depending on another parameter
+  if settings.run_command_in_term == "true" then
+    local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
+    local win_height = vim.api.nvim_call_function("winheight", {0})
 
-  vim.api.nvim_command(":!cd " .. settings.build_folder .. " && " .. settings.run_command)
+    if win_width > 1.5 * win_height then
+      vim.api.nvim_command("vsplit")
+    else
+      vim.api.nvim_command("split")
+    end
+
+    vim.api.nvim_command("terminal " .. settings.run_command)
+  else
+    vim.api.nvim_command(":! " .. settings.run_command)
+  end
 end
 
 function projector.build_and_run()
   projector.build()
   projector.run()
 end
-
--- TODO un reload du fichier de conf
 
 return projector
