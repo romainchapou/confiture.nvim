@@ -3,7 +3,8 @@ local settings = {
   run_command_in_term = "false",
 
   configure_command = "",
-  build_flags = "-j16 -C ${src_folder}",
+  build_flags = "",
+  clean_command = "",
   run_command = "",
 }
 

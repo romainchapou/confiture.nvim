@@ -9,6 +9,10 @@ function projector.build()
   vim.api.nvim_command(":make! "  .. settings.build_flags)
 end
 
+function projector.clean()
+  os.execute(settings.clean_command)
+end
+
 function projector.run()
   if settings.run_command_in_term == "true" then
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
