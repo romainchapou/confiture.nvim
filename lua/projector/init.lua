@@ -1,9 +1,12 @@
 local projector = {}
 local settings = require("projector.settings")
 
+function projector.configure()
+  os.execute(settings.configure_command)
+end
+
 function projector.build()
-  os.execute("mkdir -p " .. settings.src_folder .. "/" .. settings.build_folder)
-  vim.api.nvim_command(":make! -C " .. settings.build_folder .. " " .. settings.build_flags)
+  vim.api.nvim_command(":make! "  .. settings.build_flags)
 end
 
 function projector.run()
@@ -17,10 +20,7 @@ function projector.build_and_run()
   projector.run()
 end
 
--- TODO setting "use_make" : si true, utiliser make avec les flags donnés, si
--- false utiliser un commande custom donnée
--- TODO voir pour substitution de variable dans le projector.conf pour à terme
--- écrire une fonction "configure" sympathique
+-- TODO option pour set makeprg
 -- TODO un reload du fichier de conf
 
 return projector
