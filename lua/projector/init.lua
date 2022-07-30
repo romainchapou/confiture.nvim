@@ -20,7 +20,6 @@ function projector.build_and_run()
   projector.run()
 end
 
--- TODO option pour set makeprg
 -- TODO un reload du fichier de conf
 
 return projector

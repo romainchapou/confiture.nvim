@@ -1,4 +1,5 @@
 local internal = {}
+local utils = require("projector.utils")
 local settings = require("projector.settings")
 
 local function replace_variables_in_string(val_str)
@@ -15,10 +16,10 @@ local function replace_variables_in_string(val_str)
   return ret_string
 end
 
-function internal.read_configuration_file(file)
-  settings["src_folder"] = vim.fn.getcwd()
+function internal.read_configuration_file()
+  local config_file = settings.src_folder .. "/" .. utils.configuration_file_name
 
-  for line in io.lines(file) do
+  for line in io.lines(config_file) do
     local parsing_successful = false
 
     -- ignoring comments and empty lines
@@ -38,6 +39,10 @@ function internal.read_configuration_file(file)
     if not parsing_successful then
       print("Warning: projector: config file line error: " .. line)
     end
+  end
+
+  if settings.makeprg ~= nil then
+    vim.api.nvim_set_option("makeprg", settings.makeprg)
   end
 end
 
