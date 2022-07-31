@@ -1,6 +1,17 @@
 local projector = {}
 local settings = require("projector.settings")
 
+local function has_error_in_quickfix_list(error_match_str)
+  for _, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
+    if string.match(entry.text, error_match_str) then
+      return true
+    end
+  end
+
+  return false
+end
+
+
 function projector.configure()
   os.execute(settings.configure_command)
 end
@@ -32,7 +43,11 @@ end
 
 function projector.build_and_run()
   projector.build()
-  projector.run()
+
+  -- we can't easely get the error code of `:make` so parse the quickfix list instead
+  if not has_error_in_quickfix_list(settings.error_match_str) then
+    projector.run()
+  end
 end
 
 return projector
