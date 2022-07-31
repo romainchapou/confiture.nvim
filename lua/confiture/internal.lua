@@ -2,14 +2,18 @@ local internal = {}
 local utils = require("confiture.utils")
 local settings = require("confiture.settings")
 
-local function replace_variables_in_string(val_str)
+local function notify(msg, log_level)
+  vim.notify("Confiture: " .. msg, log_level, { title = 'Confiture' })
+end
+
+local function replace_variables_in_string(val_str, line)
   local ret_string = val_str
 
   for to_replace in string.gmatch(val_str, "%${([%a_]+)}") do
     if settings[to_replace] ~= nil then
       ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. settings[to_replace] .. "\"")
     else
-      print("Failed to replace variable " .. to_replace)
+      notify('Failed to replace variable "' .. to_replace .. '" in line "' .. line .. '"' , vim.log.levels.WARN)
     end
   end
 
@@ -29,7 +33,7 @@ function internal.read_configuration_file()
       for key, val in string.gmatch(line, "([%a_]+) ?: ?\"(.*)\"") do
         parsing_successful = true
 
-        val = replace_variables_in_string(val)
+        val = replace_variables_in_string(val, line)
         settings[key] = val
 
         break
@@ -37,7 +41,7 @@ function internal.read_configuration_file()
     end
 
     if not parsing_successful then
-      print("Warning: confiture: config file line error: " .. line)
+      notify("Config file line error: " .. line, vim.log.levels.WARN)
     end
   end
 
