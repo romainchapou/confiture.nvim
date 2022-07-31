@@ -1,5 +1,5 @@
-local projector = {}
-local settings = require("projector.settings")
+local confiture = {}
+local settings = require("confiture.settings")
 
 local function has_error_in_quickfix_list(error_match_str)
   for _, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
@@ -12,19 +12,19 @@ local function has_error_in_quickfix_list(error_match_str)
 end
 
 
-function projector.configure()
+function confiture.configure()
   os.execute(settings.configure_command)
 end
 
-function projector.build()
+function confiture.build()
   vim.api.nvim_command(":make! "  .. settings.build_flags)
 end
 
-function projector.clean()
+function confiture.clean()
   os.execute(settings.clean_command)
 end
 
-function projector.run()
+function confiture.run()
   if settings.run_command_in_term == "true" then
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})
@@ -41,13 +41,13 @@ function projector.run()
   end
 end
 
-function projector.build_and_run()
-  projector.build()
+function confiture.build_and_run()
+  confiture.build()
 
   -- we can't easely get the error code of `:make` so parse the quickfix list instead
   if not has_error_in_quickfix_list(settings.error_match_str) then
-    projector.run()
+    confiture.run()
   end
 end
 
-return projector
+return confiture

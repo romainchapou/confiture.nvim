@@ -1,6 +1,6 @@
 local utils = {}
 
-utils.configuration_file_name = "projector.conf"
+utils.configuration_file_name = "project.conf"
 
 function utils.file_exists(file)
   local f = io.open(file, "rb")

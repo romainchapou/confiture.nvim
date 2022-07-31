@@ -1,6 +1,6 @@
 local internal = {}
-local utils = require("projector.utils")
-local settings = require("projector.settings")
+local utils = require("confiture.utils")
+local settings = require("confiture.settings")
 
 local function replace_variables_in_string(val_str)
   local ret_string = val_str
@@ -37,7 +37,7 @@ function internal.read_configuration_file()
     end
 
     if not parsing_successful then
-      print("Warning: projector: config file line error: " .. line)
+      print("Warning: confiture: config file line error: " .. line)
     end
   end
 
