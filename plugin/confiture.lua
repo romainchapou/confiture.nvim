@@ -1,14 +1,33 @@
-local confiture_file_name = require("confiture.utils").configuration_file_name
+local utils = require("confiture.utils")
 
-if require("confiture.utils").file_exists(confiture_file_name) then
+-- try to read the config file at startup
+if utils.file_exists(utils.configuration_file_name) then
   local settings = require("confiture.settings")
 
   require("confiture.internal").read_configuration_file(settings)
 end
 
-vim.api.nvim_create_user_command("ConfitureReload", require("confiture").reload, { nargs = 0 })
-vim.api.nvim_create_user_command("ConfitureConfigure", require("confiture").configure, { nargs = 0 })
-vim.api.nvim_create_user_command("ConfitureBuild", require("confiture").build, { nargs = 0 })
-vim.api.nvim_create_user_command("ConfitureRun", require("confiture").run, { nargs = 0 })
-vim.api.nvim_create_user_command("ConfitureBuildAndRun", require("confiture").build_and_run, { nargs = 0 })
-vim.api.nvim_create_user_command("ConfitureClean", require("confiture").clean, { nargs = 0 })
+local function confiture_launch(cmd)
+  local func = cmd.args
+
+  if require("confiture")[func] == nil then
+    utils.warn("Command not found:" .. func)
+  else
+    -- launch the function defined in lua/confiture/init.lua
+    require("confiture")[func]()
+  end
+end
+
+local function confiture_complete(arg)
+  local matches = {}
+
+  for command in pairs(require("confiture")) do
+    if vim.startswith(command, arg) then
+      table.insert(matches, command)
+    end
+  end
+
+  return matches
+end
+
+vim.api.nvim_create_user_command("Confiture", confiture_launch, { nargs = 1, complete = confiture_complete })
