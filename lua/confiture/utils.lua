@@ -2,6 +2,10 @@ local utils = {}
 
 utils.configuration_file_name = "project.conf"
 
+function utils.warn(msg)
+  vim.notify("Confiture: " .. msg, vim.log.levels.WARN, { title = 'Confiture' })
+end
+
 function utils.file_exists(file)
   local f = io.open(file, "rb")
   if f then f:close() end
