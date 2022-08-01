@@ -37,6 +37,10 @@ function internal.read_configuration_file(settings_to_change)
       parsing_successful = true
     else
       for key, val in string.gmatch(line, "([%a_]+) ?: ?\"(.*)\"") do
+        if key == "src_folder" then
+          utils.warn("You shouldn't manually define src_folder (done in line: " .. line .. ")")
+        end
+
         parsing_successful = true
 
         val = replace_variables_in_string(val, settings_to_change, line)

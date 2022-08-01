@@ -1,5 +1,5 @@
 local settings = {
-  -- src_folder to be set in read_configuration_file
+  -- src_folder to be set elsewhere
   error_match_str = "^%s*error: ",
   run_command_in_term = "false",
 

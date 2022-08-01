@@ -81,6 +81,8 @@ function confiture.build_and_run()
   -- we can't easely get the error code of `:make` so parse the quickfix list instead
   if not has_error_in_quickfix_list(require("confiture.settings").error_match_str) then
     confiture.run()
+  else
+    utils.warn("Build command failed")
   end
 end
 
