@@ -2,6 +2,8 @@
 
 A simple way to save and launch your project specific commands.
 
+Note: this is a WIP, still under testing, the interface may change.
+
 
 ## Main motivations
 
@@ -102,4 +104,4 @@ nnoremap <leader><cr> :Confiture build_and_run<cr><cr>
 
 ### Advanced usage note
 
-To find out if a build succeeded, the plugin parses the quickfix list for errors (as we can't easily get the error code of the `:make` command). This relies on a regex which may not always work. You can provide your own regex (in lua format) by setting the variable `error_match_str` in your `project.conf`. Default value is `^%s*error: `.
+To find out if a build succeeded, the plugin parses the quickfix list for errors (as we can't easily get the error code of the `:make` command). This relies on a regex which may not always work. You can provide your own regex (in lua format) by setting the variable `error_match_str` in your `project.conf`. Default value is `^%s*%l*%s*error: `.

@@ -68,6 +68,7 @@ function confiture.run()
     end
 
     vim.api.nvim_command("terminal " .. settings.run_command)
+    vim.api.nvim_command("startinsert")
   else
     vim.api.nvim_command(":! " .. settings.run_command)
   end

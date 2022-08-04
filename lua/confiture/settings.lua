@@ -1,6 +1,6 @@
 local settings = {
   -- src_folder to be set elsewhere
-  error_match_str = "^%s*error: ",
+  error_match_str = "^%s*%l*%s*error: ",
   run_command_in_term = "false",
 
   configure_command = "",
