@@ -1,15 +1,6 @@
 local confiture = {}
 local utils = require("confiture.utils")
 
-local function config_file_not_read()
-  if package.loaded["confiture.internal"] == nil then
-    utils.warn("Faild to launch command, no config file")
-    return true
-  end
-
-  return false
-end
-
 local function has_error_in_quickfix_list(error_match_str)
   for _, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
     if string.match(entry.text, error_match_str) then
@@ -21,17 +12,11 @@ local function has_error_in_quickfix_list(error_match_str)
 end
 
 
-function confiture.configure()
-  if config_file_not_read() then return end
-
-  vim.api.nvim_command(":! " .. require("confiture.settings").configure_command)
+function confiture.configure(settings)
+  vim.api.nvim_command(":! " .. settings.configure_command)
 end
 
-function confiture.build()
-  if config_file_not_read() then return end
-
-  local settings = require("confiture.settings")
-
+function confiture.build(settings)
   -- apply correct makeprg and then restore the user's setting
   local saved_makeprg = vim.api.nvim_get_option("makeprg")
 
@@ -46,17 +31,11 @@ function confiture.build()
   end
 end
 
-function confiture.clean()
-  if config_file_not_read() then return end
-
-  vim.api.nvim_command(":! " .. require("confiture.settings").clean_command)
+function confiture.clean(settings)
+  vim.api.nvim_command(":! " .. settings.clean_command)
 end
 
-function confiture.run()
-  if config_file_not_read() then return end
-
-  local settings = require("confiture.settings")
-
+function confiture.run(settings)
   if settings.run_command_in_term == "true" then
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})
@@ -74,30 +53,30 @@ function confiture.run()
   end
 end
 
-function confiture.build_and_run()
-  if config_file_not_read() then return end
-
-  confiture.build()
+function confiture.build_and_run(settings)
+  confiture.build(settings)
 
   -- we can't easely get the error code of `:make` so parse the quickfix list instead
-  if not has_error_in_quickfix_list(require("confiture.settings").error_match_str) then
-    confiture.run()
+  if not has_error_in_quickfix_list(settings.error_match_str) then
+    confiture.run(settings)
   else
     utils.warn("Build command failed")
   end
 end
 
-function confiture.reload()
-  local saved_src_folder = require("confiture.settings").src_folder
+function confiture.command_runner(command)
+  local config_file = utils.configuration_file_name
 
-  -- unload the settings
-  package.loaded["confiture.settings"] = nil
+  if not utils.file_exists(config_file) then
+    utils.warn("Configuration file not found, can't run command")
+    return
+  end
 
-  local new_settings = require("confiture.settings")
+  local settings = require("confiture.internal").read_configuration_file(config_file)
 
-  new_settings.src_folder = saved_src_folder
+  if settings == nil then return end
 
-  require("confiture.internal").read_configuration_file(new_settings)
+  confiture[command](settings)
 end
 
 return confiture
