@@ -1,14 +1,14 @@
 local function confiture_launch(cmd)
   local func = cmd.args
 
-  require("confiture").command_runner(func)
+  require("confiture").command_launcher(func)
 end
 
 local function confiture_complete(arg)
   local matches = {}
 
   for command in pairs(require("confiture")) do
-    if command ~= "command_runner" and vim.startswith(command, arg) then
+    if command ~= "command_launcher" and vim.startswith(command, arg) then
       table.insert(matches, command)
     end
   end

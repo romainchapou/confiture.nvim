@@ -1,14 +1,15 @@
 local internal = {}
 local utils = require("confiture.utils")
 
-local function replace_variables_in_string(val_str, settings, line)
+local function replace_variables_in_string(val_str, settings, line, line_nb)
   local ret_string = val_str
 
   for to_replace in string.gmatch(val_str, "%${([%a_]+)}") do
     if settings[to_replace] ~= nil then
       ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. settings[to_replace] .. "\"")
     else
-      utils.warn('Failed to replace variable "' .. to_replace .. '" in line "' .. line .. '"' )
+      utils.warn('Failed to replace undeclared variable "' .. to_replace ..
+                 '" in line' .. line_nb .. ': "' .. line .. '"' )
     end
   end
 
@@ -17,13 +18,11 @@ end
 
 function internal.read_configuration_file(config_file)
   local settings = {
-    -- makeprg
-    src_folder = vim.fn.getcwd(),
+    src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
     error_match_str = "^%s*%l*%s*error: ",
-    run_command_in_term = "false",
+    run_command_in_term = "true", -- TODO check this is true or false after parsing
 
     configure_command = "",
-    build_flags = "",
     clean_command = "",
     run_command = "",
   }
@@ -52,7 +51,7 @@ function internal.read_configuration_file(config_file)
     end
 
     if not parsing_successful then
-      utils.warn("Configuration file error line " .. line_nb .. ": " .. line)
+      utils.warn('Configuration file error line ' .. line_nb .. ': "' .. line .. '"')
       return nil
     end
 

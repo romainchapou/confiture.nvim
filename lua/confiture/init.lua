@@ -2,7 +2,11 @@ local confiture = {}
 local utils = require("confiture.utils")
 
 local function has_error_in_quickfix_list(error_match_str)
-  for _, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
+  for entry_nb, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
+    if entry_nb == 1 and string.match(entry.text, "command not found:") then
+      return true
+    end
+
     if string.match(entry.text, error_match_str) then
       return true
     end
@@ -16,18 +20,23 @@ function confiture.configure(settings)
   vim.api.nvim_command(":! " .. settings.configure_command)
 end
 
-function confiture.build(settings)
+local function build_with(makeprg, flags)
   -- apply correct makeprg and then restore the user's setting
   local saved_makeprg = vim.api.nvim_get_option("makeprg")
 
-  if settings.makeprg ~= nil then
-    vim.api.nvim_set_option("makeprg", settings.makeprg)
-  end
+  vim.api.nvim_set_option("makeprg", makeprg)
 
-  vim.api.nvim_command(":make! "  .. settings.build_flags)
+  vim.api.nvim_command(":make! "  .. flags)
 
-  if settings.makeprg ~= nil then
-    vim.api.nvim_set_option("makeprg", saved_makeprg)
+  vim.api.nvim_set_option("makeprg", saved_makeprg)
+end
+
+function confiture.build(settings)
+  -- TODO with new command support, check in command_launcher that the "build" command is defined
+  if settings.build_command ~= nil then
+    local makeprg = string.gsub(settings.build_command, "^([%a_-]+)%s*(.*)", "%1")
+    local build_flags = string.gsub(settings.build_command, "^([%a_-]+)%s*(.*)", "%2")
+    build_with(makeprg, build_flags)
   end
 end
 
@@ -54,27 +63,33 @@ function confiture.run(settings)
 end
 
 function confiture.build_and_run(settings)
-  confiture.build(settings)
+  -- if no build command, just launch the run command
+  local do_build = settings.build_command ~= nil
+
+  if do_build then confiture.build(settings) end
 
   -- we can't easely get the error code of `:make` so parse the quickfix list instead
-  if not has_error_in_quickfix_list(settings.error_match_str) then
+  if not do_build or not has_error_in_quickfix_list(settings.error_match_str) then
     confiture.run(settings)
   else
     utils.warn("Build command failed")
   end
 end
 
-function confiture.command_runner(command)
+function confiture.command_launcher(command)
+  if confiture[command] == nil then
+    return utils.warn('"' .. command .. '" is not a valid command name')
+  end
+
   local config_file = utils.configuration_file_name
 
   if not utils.file_exists(config_file) then
-    utils.warn("Configuration file not found, can't run command")
-    return
+    return utils.warn("Configuration file not found, can't run command")
   end
 
   local settings = require("confiture.internal").read_configuration_file(config_file)
 
-  if settings == nil then return end
+  if settings == nil then return end -- parsing error
 
   confiture[command](settings)
 end
