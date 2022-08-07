@@ -1,13 +1,13 @@
 local confiture = {}
 local utils = require("confiture.utils")
 
-local function has_error_in_quickfix_list(error_match_str)
+local function has_error_in_quickfix_list()
   for entry_nb, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
     if entry_nb == 1 and string.match(entry.text, "^%s*command not found:") then
       return true
     end
 
-    if string.match(entry.text, error_match_str) then
+    if string.match(entry.text, "^%s*%l*%s*error: ") then
       return true
     end
   end
@@ -29,6 +29,35 @@ local function build_with(makeprg, flags)
   vim.api.nvim_command(":make! "  .. flags)
 
   vim.api.nvim_set_option("makeprg", saved_makeprg)
+end
+
+local function build_and_check_success(state)
+  -- change 'shellpipe' to actually catch the error code of ':make' as explained here:
+  -- https://vi.stackexchange.com/questions/26947/check-if-make-fails
+  local shell = vim.api.nvim_get_option("shell")
+  local saved_shellpipe = vim.api.nvim_get_option("shellpipe")
+  local should_parse_qf_list = false
+
+  if string.match(shell, "[^%a]?zsh$") then
+    vim.api.nvim_set_option("shellpipe", ' 2>&1| tee %s; exit ${pipestatus[1]}')
+  elseif string.match(shell, "[^%a]?bash$") then
+    vim.api.nvim_set_option("shellpipe", ' 2>&1| tee %s; exit ${PIPESTATUS[0]}')
+  else
+    -- if no standard shell found, we can't get the error code from a shellpipe modification,
+    -- so resort to parsing the quickfix list
+    should_parse_qf_list = true
+  end
+
+  confiture.build(state)
+
+  vim.api.nvim_set_option("shellpipe", saved_shellpipe)
+
+  -- return true on success
+  if should_parse_qf_list then
+    return not has_error_in_quickfix_list()
+  else
+    return vim.v.shell_error == 0
+  end
 end
 
 function confiture.build(state)
@@ -66,12 +95,11 @@ end
 function confiture.build_and_run(state)
   -- if no build command, just launch the run command
   local do_build = state.commands.build ~= nil
+  local build_success
 
-  if do_build then confiture.build(state) end
+  if do_build then build_success = build_and_check_success(state) end
 
-  -- we can't easely get the error code of `:make` so parse the quickfix list instead
-  -- TODO @Improve: this will fail to detect the case where the build tool fails if no build config file found.
-  if not do_build or not has_error_in_quickfix_list(state.variables.error_match_str) then
+  if not do_build or build_success then
     confiture.run(state)
   else
     utils.warn("Build command failed")
@@ -98,7 +126,7 @@ function confiture.command_launcher(cmd)
 
   if cmd == "build_and_run" then
     if state.commands.run ~= nil then
-      confiture[cmd](state)
+      confiture.build_and_run(state)
     else
       return utils.warn('Command "run" undefined in configuration file')
     end

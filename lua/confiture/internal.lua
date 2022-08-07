@@ -51,7 +51,6 @@ function internal.read_configuration_file(config_file)
   local state = {
     variables = {
       src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
-      error_match_str = "^%s*%l*%s*error: ",
       run_command_in_term = "true", -- TODO check this is true or false after parsing
     },
 
