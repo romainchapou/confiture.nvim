@@ -74,7 +74,7 @@ function confiture.clean(state)
 end
 
 function confiture.run(state)
-  if state.variables.run_command_in_term == "true" then
+  if state.variables.RUN_IN_TERM == "true" then
     -- choose what looks better between a horizontal and a vertical split
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})

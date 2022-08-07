@@ -51,7 +51,7 @@ function internal.read_configuration_file(config_file)
   local state = {
     variables = {
       src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
-      run_command_in_term = "true", -- TODO check this is true or false after parsing
+      RUN_IN_TERM = "true",
     },
 
     commands = {
@@ -90,6 +90,12 @@ function internal.read_configuration_file(config_file)
     end
 
     line_nb = line_nb + 1
+  end
+
+  if state.variables.RUN_IN_TERM ~= "true" and state.variables.RUN_IN_TERM ~= "false" then
+      utils.warn('Configuration file error: invalid RUN_IN_TERM value "' .. state.variables.RUN_IN_TERM
+                 .. '", should be "true" or "false"')
+      return nil
   end
 
   return state
