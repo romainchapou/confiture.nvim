@@ -1,7 +1,7 @@
 local function confiture_launch(cmd)
-  local func = cmd.args
+  local arg = cmd.args
 
-  require("confiture").command_launcher(func)
+  require("confiture").command_launcher(arg)
 end
 
 local function confiture_complete(arg)

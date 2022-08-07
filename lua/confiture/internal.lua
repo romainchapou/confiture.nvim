@@ -1,12 +1,12 @@
 local internal = {}
 local utils = require("confiture.utils")
 
-local function replace_variables_in_string(val_str, settings, line, line_nb)
+local function replace_variables_in_string(val_str, variables, line, line_nb)
   local ret_string = val_str
 
   for to_replace in string.gmatch(val_str, "%${([%a_]+)}") do
-    if settings[to_replace] ~= nil then
-      ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. settings[to_replace] .. "\"")
+    if variables[to_replace] ~= nil then
+      ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. variables[to_replace] .. "\"")
     else
       utils.warn('Failed to replace undeclared variable "' .. to_replace ..
                  '" in line' .. line_nb .. ': "' .. line .. '"' )
@@ -16,15 +16,52 @@ local function replace_variables_in_string(val_str, settings, line, line_nb)
   return ret_string
 end
 
-function internal.read_configuration_file(config_file)
-  local settings = {
-    src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
-    error_match_str = "^%s*%l*%s*error: ",
-    run_command_in_term = "true", -- TODO check this is true or false after parsing
+local function parse_command(line, state_to_update)
+  local parsing_successful = false
 
-    configure_command = "",
-    clean_command = "",
-    run_command = "",
+  for key, val in string.gmatch(line, "@([%a_]+)%s*:%s*\"(.*)\"") do
+    parsing_successful = true
+
+    val = replace_variables_in_string(val, state_to_update.variables, line)
+    state_to_update.commands[key] = val
+
+    break
+  end
+
+  return parsing_successful
+end
+
+local function parse_variable(line, state_to_update)
+  local parsing_successful = false
+
+  for key, val in string.gmatch(line, "([%a_]+)%s*:%s*\"(.*)\"") do
+    parsing_successful = true
+
+    val = replace_variables_in_string(val, state_to_update.variables, line)
+    state_to_update.variables[key] = val
+
+    break
+  end
+
+  return parsing_successful
+end
+
+-- 'config_file' supposed to exist
+function internal.read_configuration_file(config_file)
+  local state = {
+    variables = {
+      src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
+      error_match_str = "^%s*%l*%s*error: ",
+      run_command_in_term = "true", -- TODO check this is true or false after parsing
+    },
+
+    commands = {
+      -- possible commands:
+      --   configure
+      --   build
+      --   run
+      --   clean
+    }
   }
 
   local line_nb = 1
@@ -36,17 +73,15 @@ function internal.read_configuration_file(config_file)
     if string.match(line, "^%s*$") or string.match(line, "^%s*#") == '#' then
       parsing_successful = true
     else
-      for key, val in string.gmatch(line, "([%a_]+) ?: ?\"(.*)\"") do
-        if key == "src_folder" then
-          utils.warn("You shouldn't manually define src_folder (done in line: " .. line .. ")")
-        end
+      line = string.gsub(line, "^%s*(.*)", "%1")
 
-        parsing_successful = true
+      -- commands are declared with a '@', variables are not
+      local first_char = string.sub(line, 1, 1)
 
-        val = replace_variables_in_string(val, settings, line)
-        settings[key] = val
-
-        break
+      if first_char == '@' then
+        parsing_successful = parse_command(line, state)
+      else
+        parsing_successful = parse_variable(line, state)
       end
     end
 
@@ -58,7 +93,7 @@ function internal.read_configuration_file(config_file)
     line_nb = line_nb + 1
   end
 
-  return settings
+  return state
 end
 
 return internal
