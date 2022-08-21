@@ -20,7 +20,7 @@ function confiture.configure(state)
   vim.api.nvim_command(":! " .. state.commands.configure)
 end
 
-local function build_with(makeprg, flags, compiler, should_dispatch)
+local function build_with(makeprg, compiler, should_dispatch)
   -- apply correct settings and then restore the user's values
   local saved_makeprg = vim.api.nvim_get_option_value("makeprg", {scope = 'local'})
 
@@ -44,9 +44,9 @@ local function build_with(makeprg, flags, compiler, should_dispatch)
   -- use tpope/vim-dispatch if available and asked for
   -- ('should_dispatch' should be false for build_and_run)
   if should_dispatch and has_dispatch_plugin then
-    vim.api.nvim_command(":Make "  .. flags)
+    vim.api.nvim_command(":Make")
   else
-    vim.api.nvim_command(":make! "  .. flags)
+    vim.api.nvim_command(":make!")
   end
 
   -- restoring user's :compiler value is done by setting back those two variables and makeprg and errorformat
@@ -88,16 +88,9 @@ local function build_and_check_success(state)
 end
 
 function confiture.build(state, from_build_and_run)
-  -- @Cleanup: putting everything in 'makeprg' is ok, separation is useless
-  local parse_build_command_str = "^([%a_-]+)%s*(.*)"
-
-  local makeprg = string.gsub(state.commands.build, parse_build_command_str, "%1")
-  local build_flags = string.gsub(state.commands.build, parse_build_command_str, "%2")
-  local compiler = state.variables.COMPILER
-
   local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD == "true"
 
-  build_with(makeprg, build_flags, compiler, should_dispatch)
+  build_with(state.commands.build, state.variables.COMPILER, should_dispatch)
 end
 
 function confiture.clean(state)
