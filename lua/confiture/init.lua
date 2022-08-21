@@ -20,9 +20,17 @@ function confiture.configure(state)
   vim.api.nvim_command(":! " .. state.commands.configure)
 end
 
-local function build_with(makeprg, flags, should_dispatch)
-  -- apply correct makeprg and then restore the user's setting
+local function build_with(makeprg, flags, compiler, should_dispatch)
+  -- apply correct settings and then restore the user's values
   local saved_makeprg = vim.api.nvim_get_option_value("makeprg", {scope = 'local'})
+
+  local saved_errorformat = vim.api.nvim_get_option_value("errorformat", {scope = 'local'})
+
+  local saved_current_compiler = vim.b.current_compiler -- may be nil
+
+  if compiler ~= "" then
+    vim.api.nvim_command(":compiler " .. compiler)
+  end
 
   vim.api.nvim_set_option_value("makeprg", makeprg, {scope = 'local'})
 
@@ -40,6 +48,12 @@ local function build_with(makeprg, flags, should_dispatch)
   else
     vim.api.nvim_command(":make! "  .. flags)
   end
+
+  -- restoring user's :compiler value is done by setting back those two variables and makeprg and errorformat
+  vim.b.current_compiler = saved_current_compiler
+  vim.g.current_compiler = saved_current_compiler -- @Unsure
+
+  vim.api.nvim_set_option_value("errorformat", saved_errorformat, {scope = 'local'})
 
   vim.api.nvim_set_option_value("makeprg", saved_makeprg, {scope = 'local'})
 end
@@ -74,14 +88,16 @@ local function build_and_check_success(state)
 end
 
 function confiture.build(state, from_build_and_run)
+  -- @Cleanup: putting everything in 'makeprg' is ok, separation is useless
   local parse_build_command_str = "^([%a_-]+)%s*(.*)"
 
   local makeprg = string.gsub(state.commands.build, parse_build_command_str, "%1")
   local build_flags = string.gsub(state.commands.build, parse_build_command_str, "%2")
+  local compiler = state.variables.COMPILER
 
   local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD == "true"
 
-  build_with(makeprg, build_flags, should_dispatch)
+  build_with(makeprg, build_flags, compiler, should_dispatch)
 end
 
 function confiture.clean(state)

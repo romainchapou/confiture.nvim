@@ -63,6 +63,7 @@ function internal.read_configuration_file(config_file)
       src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
       RUN_IN_TERM = "true",
       DISPATCH_BUILD = "true",
+      COMPILER = "",
     },
 
     commands = {
