@@ -46,12 +46,23 @@ local function parse_variable(line, state_to_update)
   return parsing_successful
 end
 
+local function check_boolean_variable_val(state, var)
+  if state.variables[var] ~= "true" and state.variables[var] ~= "false" then
+    utils.warn('Configuration file error: invalid ' .. var .. ' value "' .. state.variables[var]
+               .. '", should be "true" or "false"')
+    return false
+  end
+
+  return true
+end
+
 -- 'config_file' supposed to exist
 function internal.read_configuration_file(config_file)
   local state = {
     variables = {
       src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
       RUN_IN_TERM = "true",
+      DISPATCH_BUILD = "true",
     },
 
     commands = {
@@ -92,11 +103,8 @@ function internal.read_configuration_file(config_file)
     line_nb = line_nb + 1
   end
 
-  if state.variables.RUN_IN_TERM ~= "true" and state.variables.RUN_IN_TERM ~= "false" then
-      utils.warn('Configuration file error: invalid RUN_IN_TERM value "' .. state.variables.RUN_IN_TERM
-                 .. '", should be "true" or "false"')
-      return nil
-  end
+  if not check_boolean_variable_val(state, "RUN_IN_TERM")    then return nil end
+  if not check_boolean_variable_val(state, "DISPATCH_BUILD") then return nil end
 
   return state
 end

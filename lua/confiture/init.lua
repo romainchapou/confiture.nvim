@@ -20,13 +20,26 @@ function confiture.configure(state)
   vim.api.nvim_command(":! " .. state.commands.configure)
 end
 
-local function build_with(makeprg, flags)
+local function build_with(makeprg, flags, should_dispatch)
   -- apply correct makeprg and then restore the user's setting
   local saved_makeprg = vim.api.nvim_get_option("makeprg")
 
   vim.api.nvim_set_option("makeprg", makeprg)
 
-  vim.api.nvim_command(":make! "  .. flags)
+  local has_dispatch_plugin = vim.fn.exists(":Make") == 2
+
+  -- cancel dispatch build to be sure we are not running multiple builds at a time
+  if has_dispatch_plugin then
+    vim.api.nvim_command(":silent AbortDispatch")
+  end
+
+  -- use tpope/vim-dispatch if available and asked for
+  -- ('should_dispatch' should be false for build_and_run)
+  if should_dispatch and has_dispatch_plugin then
+    vim.api.nvim_command(":Make "  .. flags)
+  else
+    vim.api.nvim_command(":make! "  .. flags)
+  end
 
   vim.api.nvim_set_option("makeprg", saved_makeprg)
 end
@@ -48,7 +61,7 @@ local function build_and_check_success(state)
     should_parse_qf_list = true
   end
 
-  confiture.build(state)
+  confiture.build(state, true)
 
   vim.api.nvim_set_option("shellpipe", saved_shellpipe)
 
@@ -60,13 +73,15 @@ local function build_and_check_success(state)
   end
 end
 
-function confiture.build(state)
+function confiture.build(state, from_build_and_run)
   local parse_build_command_str = "^([%a_-]+)%s*(.*)"
 
   local makeprg = string.gsub(state.commands.build, parse_build_command_str, "%1")
   local build_flags = string.gsub(state.commands.build, parse_build_command_str, "%2")
 
-  build_with(makeprg, build_flags)
+  local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD == "true"
+
+  build_with(makeprg, build_flags, should_dispatch)
 end
 
 function confiture.clean(state)
