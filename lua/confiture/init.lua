@@ -22,9 +22,9 @@ end
 
 local function build_with(makeprg, flags, should_dispatch)
   -- apply correct makeprg and then restore the user's setting
-  local saved_makeprg = vim.api.nvim_get_option("makeprg")
+  local saved_makeprg = vim.api.nvim_get_option_value("makeprg", {scope = 'local'})
 
-  vim.api.nvim_set_option("makeprg", makeprg)
+  vim.api.nvim_set_option_value("makeprg", makeprg, {scope = 'local'})
 
   local has_dispatch_plugin = vim.fn.exists(":Make") == 2
 
@@ -41,20 +41,20 @@ local function build_with(makeprg, flags, should_dispatch)
     vim.api.nvim_command(":make! "  .. flags)
   end
 
-  vim.api.nvim_set_option("makeprg", saved_makeprg)
+  vim.api.nvim_set_option_value("makeprg", saved_makeprg, {scope = 'local'})
 end
 
 local function build_and_check_success(state)
   -- change 'shellpipe' to actually catch the error code of ':make' as explained here:
   -- https://vi.stackexchange.com/questions/26947/check-if-make-fails
-  local shell = vim.api.nvim_get_option("shell")
-  local saved_shellpipe = vim.api.nvim_get_option("shellpipe")
+  local shell = vim.api.nvim_get_option_value("shell", {scope = 'local'})
+  local saved_shellpipe = vim.api.nvim_get_option_value("shellpipe", {scope = 'local'})
   local should_parse_qf_list = false
 
   if string.match(shell, "[^%a]?zsh$") then
-    vim.api.nvim_set_option("shellpipe", ' 2>&1| tee %s; exit ${pipestatus[1]}')
+    vim.api.nvim_set_option_value("shellpipe", ' 2>&1| tee %s; exit ${pipestatus[1]}', {scope = 'local'})
   elseif string.match(shell, "[^%a]?bash$") then
-    vim.api.nvim_set_option("shellpipe", ' 2>&1| tee %s; exit ${PIPESTATUS[0]}')
+    vim.api.nvim_set_option_value("shellpipe", ' 2>&1| tee %s; exit ${PIPESTATUS[0]}', {scope = 'local'})
   else
     -- if no standard shell found, we can't get the error code from a shellpipe modification,
     -- so resort to parsing the quickfix list
@@ -63,7 +63,7 @@ local function build_and_check_success(state)
 
   confiture.build(state, true)
 
-  vim.api.nvim_set_option("shellpipe", saved_shellpipe)
+  vim.api.nvim_set_option_value("shellpipe", saved_shellpipe, {scope = 'local'})
 
   -- return true on success
   if should_parse_qf_list then
