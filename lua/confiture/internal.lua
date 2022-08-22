@@ -79,6 +79,7 @@ function internal.read_configuration_file(config_file)
       parsing_successful = true
     else
       line = string.gsub(line, "^%s*(.*)", "%1")
+      line = string.gsub(line, '\\"', '"') -- support '"' escaping
 
       -- commands are declared with a '@', variables are not
       local first_char = string.sub(line, 1, 1)
