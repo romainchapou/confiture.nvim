@@ -66,13 +66,7 @@ function internal.read_configuration_file(config_file)
       COMPILER = "",
     },
 
-    commands = {
-      -- possible commands:
-      --   configure
-      --   build
-      --   run
-      --   clean
-    }
+    commands = {}
   }
 
   local line_nb = 1

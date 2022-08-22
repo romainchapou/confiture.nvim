@@ -6,9 +6,10 @@ end
 
 local function confiture_complete(arg)
   local matches = {}
+  local available_commands = require("confiture.completion")["available_commands"]()
 
-  for command in pairs(require("confiture")) do
-    if command ~= "command_launcher" and vim.startswith(command, arg) then
+  for _, command in pairs(available_commands) do
+    if vim.startswith(command, arg) then
       table.insert(matches, command)
     end
   end

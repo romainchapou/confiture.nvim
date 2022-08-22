@@ -16,10 +16,6 @@ local function has_error_in_quickfix_list()
 end
 
 
-function confiture.configure(state)
-  vim.api.nvim_command(":! " .. state.commands.configure)
-end
-
 local function build_with(makeprg, compiler, should_dispatch)
   -- apply correct settings and then restore the user's values
   local saved_makeprg = vim.api.nvim_get_option_value("makeprg", {scope = 'local'})
@@ -71,7 +67,7 @@ local function build_and_check_success(state)
     vim.api.nvim_set_option_value("shellpipe", ' 2>&1| tee %s; exit ${PIPESTATUS[0]}', {scope = 'local'})
   else
     -- if no standard shell found, we can't get the error code from a shellpipe modification,
-    -- so resort to parsing the quickfix list
+    -- so resort to parsing the quickfix list (which is not robust)
     should_parse_qf_list = true
   end
 
@@ -91,10 +87,6 @@ function confiture.build(state, from_build_and_run)
   local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD == "true"
 
   build_with(state.commands.build, state.variables.COMPILER, should_dispatch)
-end
-
-function confiture.clean(state)
-  vim.api.nvim_command(":! " .. state.commands.clean)
 end
 
 function confiture.run(state)
@@ -132,12 +124,9 @@ end
 
 -- 'cmd' is the argument given to the :Confiture command.
 -- It should correspond to a command defined in the config file (or 'build_and_run').
--- This function will then launch the related 'confiture' function.
+-- This function will do some checks, separate the special cases (build, run
+-- and build_and_run) and launch the command
 function confiture.command_launcher(cmd)
-  if confiture[cmd] == nil then
-    return utils.warn('"' .. cmd .. '" is not a valid command name')
-  end
-
   local config_file = utils.configuration_file_name
 
   if not utils.file_exists(config_file) then
@@ -161,7 +150,11 @@ function confiture.command_launcher(cmd)
     return utils.warn('Command "' .. cmd .. '" undefined in configuration file')
   end
 
-  confiture[cmd](state)
+  if cmd == "build"  or cmd == "run" then -- build and run are special
+    return confiture[cmd](state)
+  else
+    vim.api.nvim_command(":! " .. state.commands[cmd])
+  end
 end
 
 return confiture
