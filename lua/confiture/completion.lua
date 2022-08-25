@@ -11,7 +11,7 @@ function completion.available_commands()
   if utils.file_exists(config_file) then
     for line in io.lines(config_file) do
       if not (string.match(line, "^%s*$") or string.match(line, "^%s*#") == '#') then
-        local cmd_name = string.gmatch(line, "%s*@([%a_]*)%s*:.*")()
+        local cmd_name = string.gmatch(line, "%s*@([%w_]*)%s*:.*")()
 
         if cmd_name then
           if cmd_name == 'run' then has_run_command = true end
@@ -32,9 +32,6 @@ function completion.available_commands()
   -- option so that the user can try to run it and see what is wrong
     table.insert(commands, 'run')
   end
-
-  -- vim.pretty_print(commands)
-  -- print(commands["run"])
 
   table.sort(commands, function(a, b) return a:upper() < b:upper() end)
 

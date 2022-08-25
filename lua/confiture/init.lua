@@ -84,13 +84,13 @@ local function build_and_check_success(state)
 end
 
 function confiture.build(state, from_build_and_run)
-  local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD == "true"
+  local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD
 
   build_with(state.commands.build, state.variables.COMPILER, should_dispatch)
 end
 
 function confiture.run(state)
-  if state.variables.RUN_IN_TERM == "true" then
+  if state.variables.RUN_IN_TERM then
     -- choose what looks better between a horizontal and a vertical split
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})
