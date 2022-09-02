@@ -26,7 +26,7 @@ local function replace_variables_in_string(val_str, variables, err)
         -- add quotes here in case of spaces
         ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. variables[to_replace] .. "\"")
       else
-        err.msg = 'Failed to replace ' .. type(variables[to_replace]) .. ' variable "' .. to_replace .. '"'
+        err.msg = 'Failed to replace ' .. type(variables[to_replace]) .. ' variable "' .. to_replace .. '" (should be of type string)'
         return nil
       end
     else
