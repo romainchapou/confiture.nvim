@@ -159,6 +159,11 @@ function internal.read_configuration_file(config_file)
   if not check_boolean_variable_val(state, "RUN_IN_TERM")    then return nil end
   if not check_boolean_variable_val(state, "DISPATCH_BUILD") then return nil end
 
+  if state.commands['build_and_run'] ~= nil then
+    utils.warn("Configuration file error: the 'build_and_run' command shouldn't be manually defined")
+    return nil
+  end
+
   return state
 end
 
