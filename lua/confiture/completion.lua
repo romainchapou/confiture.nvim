@@ -2,7 +2,7 @@ local completion = {}
 local utils = require("confiture.utils")
 
 -- list available commands found in config file
-function completion.available_commands()
+local function available_commands(add_build_and_run)
   local config_file = utils.configuration_file_name
 
   local commands = {}
@@ -21,7 +21,7 @@ function completion.available_commands()
       end
     end
 
-    if has_run_command then
+    if has_run_command and add_build_and_run then
       -- 'build_and_run' can be used if just 'run' is defined
       table.insert(commands, 'build_and_run')
     end
@@ -29,13 +29,26 @@ function completion.available_commands()
 
   if #commands == 0 then
   -- if no command found in the config file, still give 'run' as a completion
-  -- option so that the user can try to run it and see what is wrong
+  -- option so that the user can try to launch it and see what is wrong
     table.insert(commands, 'run')
   end
 
   table.sort(commands, function(a, b) return a:upper() < b:upper() end)
 
   return commands
+end
+
+function completion.confiture_complete(arg, add_build_and_run)
+  local matches = {}
+  local available_cmds = available_commands(add_build_and_run)
+
+  for _, command in pairs(available_cmds) do
+    if vim.startswith(command, arg) then
+      table.insert(matches, command)
+    end
+  end
+
+  return matches
 end
 
 return completion

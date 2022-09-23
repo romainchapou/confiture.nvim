@@ -15,6 +15,9 @@ local function has_error_in_quickfix_list()
   return false
 end
 
+local function has_dispatch_plugin()
+  return vim.fn.exists(":AbortDispatch") == 2
+end
 
 local function build_with(makeprg, compiler, should_dispatch)
   -- apply correct settings and then restore the user's values
@@ -30,10 +33,8 @@ local function build_with(makeprg, compiler, should_dispatch)
 
   vim.api.nvim_set_option_value("makeprg", makeprg, {scope = 'local'})
 
-  local has_dispatch_plugin = vim.fn.exists(":AbortDispatch") == 2
-
   -- cancel dispatch build to be sure we are not running multiple builds at a time
-  if has_dispatch_plugin then
+  if has_dispatch_plugin() then
     vim.api.nvim_command(":silent AbortDispatch")
   end
 
@@ -89,8 +90,7 @@ function confiture.build(state, from_build_and_run)
   build_with(state.commands.build, state.variables.COMPILER, should_dispatch)
 end
 
-function confiture.run(state)
-  if state.variables.RUN_IN_TERM then
+local function run_cmd_in_nvim_term(cmd)
     -- choose what looks better between a horizontal and a vertical split
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})
@@ -101,8 +101,13 @@ function confiture.run(state)
       vim.api.nvim_command("split")
     end
 
-    vim.api.nvim_command("terminal " .. state.commands.run)
+    vim.api.nvim_command("terminal " .. cmd)
     vim.api.nvim_command("startinsert")
+end
+
+function confiture.run(state)
+  if state.variables.RUN_IN_TERM then
+    run_cmd_in_nvim_term(state.commands.run)
   else
     vim.api.nvim_command(":! " .. state.commands.run)
   end
@@ -125,8 +130,9 @@ end
 -- 'cmd' is the argument given to the :Confiture command.
 -- It should correspond to a command defined in the config file (or 'build_and_run').
 -- This function will do some checks, separate the special cases (build, run
--- and build_and_run) and launch the command
-function confiture.command_launcher(cmd)
+-- and build_and_run for cmd_type == "defaults") and launch the command
+-- according to cmd_type
+function confiture.command_launcher(cmd, cmd_type)
   local config_file = utils.configuration_file_name
 
   if not utils.file_exists(config_file) then
@@ -138,6 +144,11 @@ function confiture.command_launcher(cmd)
   if state == nil then return end -- parsing error
 
   if cmd == "build_and_run" then
+    if cmd_type ~= "default" then
+      return utils.warn("build_and_run should be launched with a simple call to"
+                        .. "':Confiture', not ':ConfitureTerm' or ':ConfitureDispatch'")
+    end
+
     if state.commands.run ~= nil then
       confiture.build_and_run(state)
     else
@@ -150,10 +161,26 @@ function confiture.command_launcher(cmd)
     return utils.warn('Command "' .. cmd .. '" undefined in configuration file')
   end
 
-  if cmd == "build"  or cmd == "run" then -- build and run are special
-    return confiture[cmd](state)
+  if cmd_type == "default" then
+    if cmd == "build"  or cmd == "run" then -- build and run are special
+      return confiture[cmd](state)
+    else
+      vim.api.nvim_command(":! " .. state.commands[cmd])
+    end
+  elseif cmd_type == "dispatch" then
+    if not has_dispatch_plugin() then
+      return utils.warn("Can't dispatch command as tpope/vim-dispatch plugin not found")
+    end
+
+    -- @Unsure: we could do a :AbortDispatch here to make sure the user is not
+    -- running multiple build commands that may be confilcting, but as we still
+    -- want the user to be able do dispatch multiple commands, so no
+    -- :AbortDispatch for now
+    vim.api.nvim_command(":Dispatch " .. state.commands[cmd])
+  elseif cmd_type == "terminal" then
+    run_cmd_in_nvim_term(state.commands[cmd])
   else
-    vim.api.nvim_command(":! " .. state.commands[cmd])
+      return utils.warn('Inernal error: unknow cmd_type:' .. cmd_type)
   end
 end
 
