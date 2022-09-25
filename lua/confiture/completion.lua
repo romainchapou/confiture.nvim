@@ -3,7 +3,7 @@ local utils = require("confiture.utils")
 
 -- list available commands found in config file
 local function available_commands(add_build_and_run)
-  local config_file = utils.configuration_file_name
+  local config_file = vim.g.confiture_file_name
 
   local commands = {}
   local has_run_command = false

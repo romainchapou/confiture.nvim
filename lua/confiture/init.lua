@@ -135,10 +135,10 @@ end
 -- and build_and_run for cmd_type == "defaults") and launch the command
 -- according to cmd_type
 function confiture.command_launcher(cmd, cmd_type)
-  local config_file = utils.configuration_file_name
+  local config_file = vim.g.confiture_file_name
 
   if not utils.file_exists(config_file) then
-    return utils.warn("Configuration file not found, can't run command")
+    return utils.warn("Configuration file '" .. config_file .. "' not found, can't run command")
   end
 
   local state = require("confiture.internal").read_configuration_file(config_file)

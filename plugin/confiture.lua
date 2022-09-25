@@ -20,6 +20,7 @@ local function confiture_complete_simple(arg)
   return require("confiture.completion").confiture_complete(arg, false)
 end
 
+-- declaration of confiture commands
 vim.api.nvim_create_user_command(
   "Confiture",
   confiture_launch_default,
@@ -38,12 +39,17 @@ vim.api.nvim_create_user_command(
   { nargs = 1, complete = confiture_complete_simple }
 )
 
+-- set the default config file name
+if vim.g.confiture_file_name == nil then
+  vim.g.confiture_file_name = "project.conf"
+end
+
 -- use the 'conf' syntax highlighting for the config file
 local group = vim.api.nvim_create_augroup("confiture_autocmds", {})
 
 vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
   group = group,
-  pattern = require("confiture.utils").configuration_file_name,
+  pattern = vim.g.confiture_file_name,
 
   -- @Cleanup: could move this to a syntax file
   callback = function()
@@ -55,7 +61,7 @@ vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
     vim.api.nvim_command("syntax match ConfitureBooleans '\\<\\(true\\|false\\)\\>'")
     vim.api.nvim_command("hi link ConfitureBooleans Boolean")
 
-    -- highlight the strings to be subsitued with the '${...}' syntax
+    -- highlight the strings to be substituted with the '${...}' syntax
     vim.api.nvim_command("syntax match ConfitureStringToSubstitute '\\(\\$\\|@\\){\\w*}' containedin=ALL")
     vim.api.nvim_command("hi link ConfitureStringToSubstitute Special")
   end
