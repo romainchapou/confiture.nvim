@@ -37,3 +37,12 @@ vim.api.nvim_create_user_command(
   confiture_launch_dispatch,
   { nargs = 1, complete = confiture_complete_simple }
 )
+
+-- use the 'conf' syntax highlighting for the config file
+local group = vim.api.nvim_create_augroup("confiture_autocmds", {})
+
+vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
+  group = group,
+  pattern = require("confiture.utils").configuration_file_name,
+  command = "setlocal syntax=conf"
+})
