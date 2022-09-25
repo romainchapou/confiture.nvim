@@ -33,14 +33,16 @@ local function build_with(makeprg, compiler, should_dispatch)
 
   vim.api.nvim_set_option_value("makeprg", makeprg, {scope = 'local'})
 
+  local has_dispatch = has_dispatch_plugin()
+
   -- cancel dispatch build to be sure we are not running multiple builds at a time
-  if has_dispatch_plugin() then
+  if has_dispatch then
     vim.api.nvim_command(":silent AbortDispatch")
   end
 
   -- use tpope/vim-dispatch if available and asked for
   -- ('should_dispatch' should be false for build_and_run)
-  if should_dispatch and has_dispatch_plugin then
+  if should_dispatch and has_dispatch then
     vim.api.nvim_command(":Make")
   else
     vim.api.nvim_command(":make!")
