@@ -44,5 +44,19 @@ local group = vim.api.nvim_create_augroup("confiture_autocmds", {})
 vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
   group = group,
   pattern = require("confiture.utils").configuration_file_name,
-  command = "setlocal syntax=conf"
+
+  -- @Cleanup: could move this to a syntax file
+  callback = function()
+    vim.api.nvim_command("setlocal syntax=conf")
+
+    -- add some colors for the 'true' and 'false' key words
+    -- @Unsure that this is the correct way to do it, but it looks like it's
+    -- only affecting the config file, which is what we want
+    vim.api.nvim_command("syntax match ConfitureBooleans '\\<\\(true\\|false\\)\\>'")
+    vim.api.nvim_command("hi link ConfitureBooleans Boolean")
+
+    -- highlight the strings to be subsitued with the '${...}' syntax
+    vim.api.nvim_command("syntax match ConfitureStringToSubstitute '\\(\\$\\|@\\){\\w*}' containedin=ALL")
+    vim.api.nvim_command("hi link ConfitureStringToSubstitute Special")
+  end
 })
