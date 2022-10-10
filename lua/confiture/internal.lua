@@ -17,14 +17,18 @@ local function replace_commands_in_string(val_str, commands, err)
   return ret_string
 end
 
-local function replace_variables_in_string(val_str, variables, err)
+local function replace_variables_in_string(val_str, variables, target_type, err)
   local ret_string = val_str
 
   for to_replace in string.gmatch(val_str, "%${([%w_]*)}") do
     if variables[to_replace] ~= nil then
       if type(variables[to_replace]) == "string" then
-        -- add quotes here in case of spaces
-        ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. variables[to_replace] .. "\"")
+        -- add quotes here in case of spaces, but only when substituing to a command
+        if target_type == "command" then
+          ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", "\"" .. variables[to_replace] .. "\"")
+        else
+          ret_string = string.gsub(ret_string, "${" .. to_replace .. "}", variables[to_replace])
+        end
       else
         err.msg = 'Failed to replace ' .. type(variables[to_replace]) .. ' variable "' .. to_replace .. '" (should be of type string)'
         return nil
@@ -34,8 +38,6 @@ local function replace_variables_in_string(val_str, variables, err)
       return nil
     end
   end
-
-  ret_string = string.gsub(ret_string, '\\"', '"') -- support '"' escaping
 
   return ret_string
 end
@@ -90,7 +92,8 @@ local function parse_command_or_var_and_add_to_state(tokens, state_to_update)
 
     output.value = replace_commands_in_string(output.value, state_to_update.commands, err)
     if err.msg then return err.msg end
-    output.value = replace_variables_in_string(output.value, state_to_update.variables, err)
+    output.value = replace_variables_in_string(output.value, state_to_update.variables,
+                                               first_token_type, err)
     if err.msg then return err.msg end
   end
 
@@ -162,6 +165,14 @@ function internal.read_configuration_file(config_file)
   if state.commands['build_and_run'] ~= nil then
     utils.warn("Configuration file error: the 'build_and_run' command shouldn't be manually defined")
     return nil
+  end
+
+  -- support '"' escaping
+  -- IMPORTANT: do this at the very end to apply it only once
+  for _, var_value in pairs(state.variables) do
+    if (type(var_value) == "string") then
+      var_value = string.gsub(var_value, '\\"', '"')
+    end
   end
 
   return state
