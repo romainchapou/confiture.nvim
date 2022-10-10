@@ -5,11 +5,11 @@ A simple way to save and launch your project specific commands.
 
 ## Main features/motivations
 
-- Use the same simple commands (for example `:Confiture build_and_run`), or better, a mapping, to launch build commands in all your projects.
-- Have your project specific commands stored with your project files and not in your `vimrc`/`init.vim`.
+- Use the same simple vim commands (for example `:Confiture build_and_run`), or better, mappings, to launch build commands in all your projects.
+- Have your project specific commands stored with your project files and not in your `init.vim`/`init.lua`.
 - Have a `build_and_run` function to build with a call to `:make` and run a command if the build succeeds. 
-- Basic support for asynchronous builds using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch)
-- Keeping it simple: leverage standard neovim features, use as less vimrc configuration as possible.
+- Support for asynchronous builds and commands using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) and the integrated nvim terminal.
+- Keeping it simple: leverage standard neovim features, use as less vimrc configuration as possible, and provide a configuration file format that is easy to tweak.
 
 
 ## Installation
@@ -42,6 +42,12 @@ Then start neovim in this same folder and use `:Confiture` to launch your comman
 
 ### `project.conf` content
 
+_Note_: if you want to have another name for your Confiture configuration files, simply set `g:confiture_file_name` in your `init.vim`/`init.lua` to what you prefer.
+
+- Vimscript example: `let g:confiture_file_name = "my_config.whatever"`
+- Lua example: `vim.g.confiture_file_name = "my_config.whatever"`
+
+
 #### Commands
 
 Commands are declared with a `@` and assigned a value with `:`. Any name is valid, but `@build` and `@run` have a special meaning. The command "`cmd`" can then be executed from Neovim with a call to `:Confiture cmd` (with nice completion).
@@ -50,6 +56,8 @@ Commands are declared with a `@` and assigned a value with `:`. Any name is vali
 - `@run`: launch the command in a new terminal window (if not specified otherwise, see the `RUN_IN_TERM` variable)
 - any other command: will be be launched with a call to `:!`
 
+If this default behaviour doesn't suit you, you can always launch any command with [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) or the integrated nvim terminal using `:ConfitureDispatch` and `:ConfitureTerm`.
+
 Variables can be used in your command definition using the `${var}` syntax, as well as other commands using the `@{cmd}` syntax (see the example section).
 
 
@@ -57,7 +65,7 @@ Variables can be used in your command definition using the `${var}` syntax, as w
 
 Variables can be assigned a value with `:` and then used in other variables or in commands using the `${var}` syntax. Variables names can be anything you want, although some have a special meaning:
 
-- `RUN_IN_TERM` (boolean): if true, the `@run` command will be launched in a nvim terminal window. If false, a simple call to `:!` will be done. **Defaults to true**.
+- `RUN_IN_TERM` (boolean): if true, the `@run` command will be launched in a nvim terminal window. If false, a simple call to `:!` will be made. **Defaults to true**.
 - `DISPATCH_BUILD` (boolean): if true, use [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) for asynchronous builds if available. **Defaults to true**.
 - `COMPILER` (string): the value should be a valid option of `:compiler`. Used to set neovim's `errorformat`. NOTE: the `makeprg` of the build command will not be affected by this. **Defaults to ""** (use the default errorformat, adapted for C/C++)
 
@@ -66,7 +74,7 @@ Variables can be assigned a value with `:` and then used in other variables or i
 
 `:Confiture build_and_run` is an additional command implicitly defined by `@build` and `@run`.
 
-- If there is a `@build` command defined, launch the `build` command. Then if it succeeded, launch the `run` command.
+- If there is a `@build` command defined, launch the `build` command. Then, if it succeeded, launch the `run` command.
 - If there is no `@build` command defined, simply launch the `run` command.
 
 This will not use [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch).
@@ -110,14 +118,16 @@ build_folder: "build-${build_type}"
 @clean_rebuild: "@{clean} && @{configure} && @{build}" # chaining commands!
 ```
 
+
 ### Advanced notes
 
-- When using the `${var}` syntax, `var` will be expanded with quotes. For example, with the following configuration, `:Confiture my_command` is equivalent to `:!echo "confiture <3"`.
+- When using the `${var}` syntax inside a command definition, `var` will be expanded with quotes. Inside a variable definition, `${var}` will be expanded **WITHOUT** quotes. For example, with the following configuration, `:Confiture my_command` is equivalent to `:!echo "ls "$HOME/my path/with spaces/my_dir/"`.
 
 ```conf
 # my project.conf
-variable: "confiture <3"
-@my_command: "echo ${variable}"
+root: "$HOME/my path/with spaces/"
+dir: "${root}/my_dir/"
+@my_command: "ls ${dir}"
 ```
 
 - When using the `@{cmd}` syntax, `cmd` will be expanded **WITHOUT** quotes, so you can chain commands. For example, with the following configuration, `:Confiture my_command` is equivalent to `:!echo hi && echo hello`.
@@ -135,12 +145,14 @@ variable: "confiture <3"
 
 - As commands and string variable values are given by `"` delimited strings, you have to escape the quotes (`\"`) if you want literal `"` characters in your variables/commands. Every other character will be interpreted as is, including any `\` not followed by a `"`. 
 
+- For some reason, launching an nvim terminal with, as argument, a command to be disowned (something like `:term my_shell_cmd & disown`) doesn't seem to work. This means that having command such as `@my_cmd: "./my_exec & disown"` and using `:ConfitureTerm my_cmd` will not keep `my_exec` open.
+
 
 ### Some recommended mappings
 
 ```vim
 " Save all buffers (ignore unnamed ones) and run a command
-nnoremap <leader>c :silent wa<cr>:Confiture configure<cr>
+nnoremap <leader>c :silent wa<cr>:ConfitureDispatch configure<cr>
 nnoremap <leader>b :silent wa<cr>:Confiture build<cr>
 " double <cr> to skip the confirmation prompt
 nnoremap <leader><cr> :silent wa<cr>:Confiture build_and_run<cr><cr>
