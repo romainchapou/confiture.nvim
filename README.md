@@ -5,7 +5,7 @@ A simple way to save and launch your project specific commands.
 
 ## Main features/motivations
 
-- Use the same simple commands (for example `:Confiture build_and_run`), or better, a mapping, to launch build commands in all your projects.
+- Use the same simple vim commands (for example `:Confiture build_and_run`), or better, mappings, to launch build commands in all your projects.
 - Have your project specific commands stored with your project files and not in your `init.vim`/`init.lua`.
 - Have a `build_and_run` function to build with a call to `:make` and run a command if the build succeeds. 
 - Support for asynchronous builds and commands using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) and the integrated nvim terminal.
@@ -65,7 +65,7 @@ Variables can be used in your command definition using the `${var}` syntax, as w
 
 Variables can be assigned a value with `:` and then used in other variables or in commands using the `${var}` syntax. Variables names can be anything you want, although some have a special meaning:
 
-- `RUN_IN_TERM` (boolean): if true, the `@run` command will be launched in a nvim terminal window. If false, a simple call to `:!` will be done. **Defaults to true**.
+- `RUN_IN_TERM` (boolean): if true, the `@run` command will be launched in a nvim terminal window. If false, a simple call to `:!` will be made. **Defaults to true**.
 - `DISPATCH_BUILD` (boolean): if true, use [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) for asynchronous builds if available. **Defaults to true**.
 - `COMPILER` (string): the value should be a valid option of `:compiler`. Used to set neovim's `errorformat`. NOTE: the `makeprg` of the build command will not be affected by this. **Defaults to ""** (use the default errorformat, adapted for C/C++)
 
