@@ -10,6 +10,10 @@ local function confiture_launch_dispatch(cmd)
   require("confiture").command_launcher(cmd.args, "dispatch")
 end
 
+local function confiture_launch_toggle_term(cmd)
+  require("confiture").command_launcher(cmd.args, "toggle_term", cmd.count)
+end
+
 
 local function confiture_complete_full(arg)
   -- add 'build_and_run' in completion options
@@ -37,6 +41,13 @@ vim.api.nvim_create_user_command(
   "ConfitureDispatch",
   confiture_launch_dispatch,
   { nargs = 1, complete = confiture_complete_simple }
+)
+
+-- this accepts a count for the ToggleTerm to target (see toggleterm.nvim's documentation)
+vim.api.nvim_create_user_command(
+  "ConfitureSendToToggleTerm",
+  confiture_launch_toggle_term,
+  { count = true, nargs = 1, complete = confiture_complete_simple }
 )
 
 -- set the default config file name

@@ -19,6 +19,10 @@ local function has_dispatch_plugin()
   return vim.fn.exists(":AbortDispatch") == 2
 end
 
+local function has_toggle_term_plugin()
+  return vim.fn.exists(":ToggleTerm") == 2
+end
+
 local function build_with(makeprg, compiler, should_dispatch)
   -- apply correct settings and then restore the user's values
   local saved_makeprg = vim.api.nvim_get_option_value("makeprg", {scope = 'local'})
@@ -134,7 +138,7 @@ end
 -- This function will do some checks, separate the special cases (build, run
 -- and build_and_run for cmd_type == "defaults") and launch the command
 -- according to cmd_type
-function confiture.command_launcher(cmd, cmd_type)
+function confiture.command_launcher(cmd, cmd_type, count)
   local config_file = vim.g.confiture_file_name
 
   if not utils.file_exists(config_file) then
@@ -179,10 +183,21 @@ function confiture.command_launcher(cmd, cmd_type)
     -- want the user to be able do dispatch multiple commands, so no
     -- :AbortDispatch for now
     vim.api.nvim_command(":Dispatch " .. state.commands[cmd])
+  elseif cmd_type == "toggle_term" then
+    if not has_toggle_term_plugin() then
+      return utils.warn("Can't send to toggle term command as akinsho/toggleterm.nvim plugin not found")
+    end
+
+    -- @Cleanup: Confiture commands should always be launched from the nvim's current working directory / the directory containging the project.conf file. This is a bit ugly but necessary.
+    -- TODO test this on windows (shoud work)
+    local nvim_current_working_dir = string.gsub(vim.fn.getcwd(), '"', '\\"')
+    require("toggleterm").exec('cd "' .. nvim_current_working_dir .. '"', count, nil, nvim_current_working_dir)
+
+    require("toggleterm").exec(state.commands[cmd], count)
   elseif cmd_type == "terminal" then
     run_cmd_in_nvim_term(state.commands[cmd])
   else
-      return utils.warn('Inernal error: unknow cmd_type:' .. cmd_type)
+      return utils.warn('Inernal error: unknow cmd_type: ' .. cmd_type)
   end
 end
 

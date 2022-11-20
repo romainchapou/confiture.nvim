@@ -8,7 +8,7 @@ A simple way to save and launch your project specific commands.
 - Use the same simple vim commands (for example `:Confiture build_and_run`), or better, mappings, to launch build commands in all your projects.
 - Have your project specific commands stored with your project files and not in your `init.vim`/`init.lua`.
 - Have a `build_and_run` function to build with a call to `:make` and run a command if the build succeeds. 
-- Support for asynchronous builds and commands using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) and the integrated nvim terminal.
+- Support for asynchronous builds and commands using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch), the integrated nvim terminal or [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim).
 - Keeping it simple: leverage standard neovim features, use as less vimrc configuration as possible, and provide a configuration file format that is easy to tweak.
 
 
@@ -56,7 +56,7 @@ Commands are declared with a `@` and assigned a value with `:`. Any name is vali
 - `@run`: launch the command in a new terminal window (if not specified otherwise, see the `RUN_IN_TERM` variable)
 - any other command: will be be launched with a call to `:!`
 
-If this default behaviour doesn't suit you, you can always launch any command with [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) or the integrated nvim terminal using `:ConfitureDispatch` and `:ConfitureTerm`.
+If this default behaviour doesn't suit you, you can always launch any command with [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch), the integrated nvim terminal or [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) using respectively `:ConfitureDispatch`, `:ConfitureTerm` or `ConfitureSendToToggleTerm`.
 
 Variables can be used in your command definition using the `${var}` syntax, as well as other commands using the `@{cmd}` syntax (see the example section).
 
