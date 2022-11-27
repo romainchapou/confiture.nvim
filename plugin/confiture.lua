@@ -55,6 +55,14 @@ if vim.g.confiture_file_name == nil then
   vim.g.confiture_file_name = "project.conf"
 end
 
+-- ToggleTerm options
+if vim.g.confiture_toggle_term_go_back == nil then
+  vim.g.confiture_toggle_term_go_back = true
+end
+if type(vim.g.confiture_toggle_term_go_back) ~= "boolean" then
+  require('confiture.utils').warn("g.confiture_toggle_term_go_back should be a boolean")
+end
+
 -- use the 'conf' syntax highlighting for the config file
 local group = vim.api.nvim_create_augroup("confiture_autocmds", {})
 

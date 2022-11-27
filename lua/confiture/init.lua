@@ -193,7 +193,7 @@ function confiture.command_launcher(cmd, cmd_type, count)
     local nvim_current_working_dir = string.gsub(vim.fn.getcwd(), '"', '\\"')
     require("toggleterm").exec('cd "' .. nvim_current_working_dir .. '"', count, nil, nvim_current_working_dir)
 
-    require("toggleterm").exec(state.commands[cmd], count)
+    require("toggleterm").exec(state.commands[cmd], count, nil, nil, nil, vim.g.confiture_toggle_term_go_back)
   elseif cmd_type == "terminal" then
     run_cmd_in_nvim_term(state.commands[cmd])
   else
