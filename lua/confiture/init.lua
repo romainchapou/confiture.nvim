@@ -186,4 +186,29 @@ function confiture.command_launcher(cmd, cmd_type)
   end
 end
 
+-- ##############################
+-- ### Part of the public API ###
+-- ##############################
+function confiture.get_variable(var_name)
+  local config_file = vim.g.confiture_file_name
+
+  if not utils.file_exists(config_file) then return nil end
+
+  local state = require("confiture.internal").read_configuration_file(config_file)
+
+  if not state then return nil end
+
+  return state.variables[var_name]
+end
+
+function confiture.build_and_return_success()
+  local config_file = vim.g.confiture_file_name
+
+  if not utils.file_exists(config_file) then return false end
+
+  local state = require("confiture.internal").read_configuration_file(config_file)
+
+  return build_and_check_success(state)
+end
+
 return confiture
