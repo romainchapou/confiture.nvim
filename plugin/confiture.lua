@@ -62,7 +62,7 @@ vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
     vim.api.nvim_command("hi link ConfitureBooleans Boolean")
 
     -- highlight the strings to be substituted with the '${...}' syntax
-    vim.api.nvim_command("syntax match ConfitureStringToSubstitute '\\(\\$\\|@\\){\\w*}' containedin=ALL")
+    vim.api.nvim_command("syntax match ConfitureStringToSubstitute '\\(\\$\\|@\\){\\w*}' containedin=confString")
     vim.api.nvim_command("hi link ConfitureStringToSubstitute Special")
   end
 })
