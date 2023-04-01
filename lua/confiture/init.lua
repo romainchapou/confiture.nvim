@@ -201,12 +201,26 @@ function confiture.get_variable(var_name)
   return state.variables[var_name]
 end
 
+function confiture.get_command(var_name)
+  local config_file = vim.g.confiture_file_name
+
+  if not utils.file_exists(config_file) then return nil end
+
+  local state = require("confiture.internal").read_configuration_file(config_file)
+
+  if not state then return nil end
+
+  return state.commands[var_name]
+end
+
 function confiture.build_and_return_success()
   local config_file = vim.g.confiture_file_name
 
   if not utils.file_exists(config_file) then return false end
 
   local state = require("confiture.internal").read_configuration_file(config_file)
+
+  if not state then return false end
 
   return build_and_check_success(state)
 end
