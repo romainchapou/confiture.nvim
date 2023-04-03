@@ -178,4 +178,112 @@ function internal.read_configuration_file(config_file)
   return state
 end
 
+-- @Optim: using a builtin tool would be quicker, but less portable
+-- from https://forum.cockos.com/showthread.php?t=244397
+local function copy_file(old_path, new_path)
+  local old_file = io.open(old_path, "rb")
+  local new_file = io.open(new_path, "wb")
+  local old_file_sz, new_file_sz = 0, 0
+
+  if not old_file or not new_file then
+    return false
+  end
+
+  while true do
+    local block = old_file:read(2^13)
+    if not block then
+      old_file_sz = old_file:seek("end")
+      break
+    end
+    new_file:write(block)
+  end
+
+  old_file:close()
+  new_file_sz = new_file:seek("end")
+  new_file:close()
+  return new_file_sz == old_file_sz
+end
+
+function internal.replace_in_config_file(key, value, is_replace_variable)
+  -- TODO start by checking if the config file is opened in a buffer, and if so, if it has unsaved changes
+
+  local pattern, replacement
+
+  if is_replace_variable then
+    pattern = "^%s*" .. key .. "%s*:%s*\".*\""
+    replacement = key .. ": \"" .. value .. "\""
+  else
+    pattern = "^%s*@" .. key .. "%s*:%s*\".*\""
+    replacement = "@" .. key .. ": \"" .. value .. "\""
+  end
+
+  local config_file_path = vim.g.confiture_file_name
+  local temp_file_path = os.tmpname()
+
+  local previous_state = internal.read_configuration_file(config_file_path)
+
+  if previous_state == nil then
+    utils.warn("can't set_[command,variable] as " .. config_file_path .. " failed parsing")
+    return
+  end
+
+  local copy_success = copy_file(config_file_path, temp_file_path)
+
+  if not copy_success then
+    utils.warn("failed to initialize " .. config_file_path .. " backup file for set_command")
+    return
+  end
+
+  local confiture_file = io.open(config_file_path, "w")
+
+  if confiture_file == nil then
+    utils.warn("failed to open " .. config_file_path .. " for set_command")
+    return
+  end
+
+  for line in io.lines(temp_file_path) do
+    local new_line = line:gsub(pattern, replacement)
+    confiture_file:write(new_line, "\n")
+  end
+
+  confiture_file:close()
+
+  -- Checking that the parsing of the new config file gives the same
+  -- information, except for the changed key
+  -- Note: this should never return false and it is a bit expensive, but we
+  -- have to be very cautious as we are overwriting a user config file
+  local function new_file_is_coherent()
+    local new_state = internal.read_configuration_file(config_file_path)
+
+    if new_state == nil then return false end
+
+    for var, old_val in pairs(previous_state.variables) do
+      if new_state.variables[var] ~= old_val then
+        if not (is_replace_variable and var == key) then
+          return false
+        end
+      end
+    end
+
+    for cmd, old_val in pairs(previous_state.commands) do
+      if new_state.commands[cmd] ~= old_val then
+        if not (not is_replace_variable and cmd == key) then
+          return false
+        end
+      end
+    end
+
+    return true
+  end
+
+  if new_file_is_coherent() then
+    -- we can safely remove the temporary file at this point
+    os.remove(temp_file_path)
+  else
+    utils.warn("set_command failed, backup of " .. config_file_path .. " is " .. temp_file_path)
+  end
+
+  -- TODO reload the confiture file buffer
+end
+
 return internal

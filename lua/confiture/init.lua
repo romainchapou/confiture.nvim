@@ -175,7 +175,7 @@ function confiture.command_launcher(cmd, cmd_type)
     end
 
     -- @Unsure: we could do a :AbortDispatch here to make sure the user is not
-    -- running multiple build commands that may be confilcting, but as we still
+    -- running multiple build commands that may be conflicting, but as we still
     -- want the user to be able do dispatch multiple commands, so no
     -- :AbortDispatch for now
     vim.api.nvim_command(":Dispatch " .. state.commands[cmd])
@@ -211,6 +211,16 @@ function confiture.get_command(var_name)
   if not state then return nil end
 
   return state.commands[var_name]
+end
+
+-- WARNING: this will overwrite the variable 'var' in you confiture config file.
+function confiture.set_variable(var, value)
+  require("confiture.internal").replace_in_config_file(var, value, true)
+end
+
+-- WARNING: this will overwrite the command 'cmd' in you confiture config file.
+function confiture.set_command(cmd, value)
+  require("confiture.internal").replace_in_config_file(cmd, value, false)
 end
 
 function confiture.build_and_return_success()
