@@ -1,6 +1,12 @@
 local confiture = {}
 local utils = require("confiture.utils")
 
+confiture.has_pending_run = false
+confiture.on_sucessful_build_callback = function() end
+
+-- TODO @Cleanup: most of this file should be move to an other file, and only
+-- the public api functions should remain
+
 local function has_error_in_quickfix_list()
   for entry_nb, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
     if entry_nb == 1 and string.match(entry.text, "^%s*command not found:") then
@@ -17,6 +23,32 @@ end
 
 local function has_dispatch_plugin()
   return vim.fn.exists(":AbortDispatch") == 2
+end
+
+if has_dispatch_plugin() then
+  -- register the autocmd to launch a callback after a successful build
+  vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+    group = vim.api.nvim_create_augroup("confiture_post_build_autocmd", {}),
+    pattern = "make",
+
+    callback = function()
+      if vim.fn["dispatch#request"] == nil then return end
+
+      local last_dispatch_infos = vim.fn["dispatch#request"]()
+
+      if confiture.has_pending_run and tonumber(last_dispatch_infos.completed) == 1 then
+        local status = tonumber(vim.fn.readfile(last_dispatch_infos.file .. '.complete')[1])
+
+        if status == 0 then
+          confiture.on_sucessful_build_callback()
+        else
+          require("confiture.utils").warn("Build command failed")
+        end
+
+        confiture.has_pending_run = false
+      end
+    end
+  })
 end
 
 local function build_with(makeprg, compiler, should_dispatch)
@@ -41,7 +73,6 @@ local function build_with(makeprg, compiler, should_dispatch)
   end
 
   -- use tpope/vim-dispatch if available and asked for
-  -- ('should_dispatch' should be false for build_and_run)
   if should_dispatch and has_dispatch then
     vim.api.nvim_command(":Make")
   else
@@ -86,47 +117,90 @@ local function build_and_check_success(state)
   end
 end
 
-function confiture.build(state, from_build_and_run)
-  local should_dispatch = not from_build_and_run and state.variables.DISPATCH_BUILD
+function confiture.build(state, force_synchronous)
+  local should_dispatch = not force_synchronous and state.variables.DISPATCH_BUILD
 
   build_with(state.commands.build, state.variables.COMPILER, should_dispatch)
 end
 
-local function run_cmd_in_nvim_term(cmd)
+-- TODO would be good to have more user control on the terminal creation
+local function run_cmd_in_nvim_term(cmd, from_async_build_and_run)
     -- choose what looks better between a horizontal and a vertical split
     local win_width =  vim.api.nvim_call_function("winwidth", {0}) / 2
     local win_height = vim.api.nvim_call_function("winheight", {0})
 
     if win_width > 1.5 * win_height then
-      vim.api.nvim_command("vsplit")
+      vim.api.nvim_command("vnew")
     else
-      vim.api.nvim_command("split")
+      vim.api.nvim_command("new")
     end
 
-    vim.api.nvim_command("terminal " .. cmd)
-    vim.api.nvim_command("startinsert")
+    vim.fn.termopen(cmd)
+
+    if from_async_build_and_run then
+      -- It seems that the TermOpen event will not be launched if this is
+      -- executed in the callback to another event. To better support other
+      -- plugins (ex: nostalgic-term.nvim), launch it directly.
+      vim.cmd([[doautocmd TermOpen]])
+    end
+
+    vim.api.nvim_command("wincmd p")
 end
 
-function confiture.run(state)
+function confiture.run(state, from_async_build_and_run)
   if state.variables.RUN_IN_TERM then
-    run_cmd_in_nvim_term(state.commands.run)
+    run_cmd_in_nvim_term(state.commands.run, from_async_build_and_run)
   else
     vim.api.nvim_command(":! " .. state.commands.run)
   end
 end
 
+function confiture.internal_build_async_and_exec_callback(state, on_success_callback)
+  confiture.on_sucessful_build_callback = on_success_callback
+
+  -- Setting this to true will launch the run command when the build
+  -- successfully finishes. See the QuickFixCmdPost autocmd in
+  -- plugin/confiture.lua
+  confiture.has_pending_run = true
+
+  build_with(state.commands.build, state.variables.COMPILER, true)
+end
+
 function confiture.build_and_run(state)
-  -- if no build command, just launch the run command
-  local do_build = state.commands.build ~= nil
-  local build_success
-
-  if do_build then build_success = build_and_check_success(state) end
-
-  if not do_build or build_success then
-    confiture.run(state)
-  else
-    utils.warn("Build command failed")
+  -- no build command, simply exec the run command
+  if state.commands.build == nil then
+    confiture.run(state, false)
+    return
   end
+
+  if not has_dispatch_plugin() or not state.variables.DISPATCH_BUILD then
+    -- fallback to a synchronous build and run
+    local build_success = build_and_check_success(state)
+
+    if build_success then
+      confiture.run(state, false)
+    else
+      utils.warn("Build command failed")
+    end
+  else
+    confiture.internal_build_async_and_exec_callback(state, function()
+      confiture.run(state, true)
+    end)
+  end
+end
+
+function confiture.get_state(should_log)
+  local config_file = vim.g.confiture_file_name
+
+  if not utils.file_exists(config_file) then
+    if should_log then
+      utils.warn("Configuration file '" .. config_file .. "' not found, can't run command")
+    end
+
+    return
+  end
+
+  return require("confiture.internal").read_configuration_file(config_file)
 end
 
 -- 'cmd' is the argument given to the :Confiture command.
@@ -135,13 +209,7 @@ end
 -- and build_and_run for cmd_type == "defaults") and launch the command
 -- according to cmd_type
 function confiture.command_launcher(cmd, cmd_type)
-  local config_file = vim.g.confiture_file_name
-
-  if not utils.file_exists(config_file) then
-    return utils.warn("Configuration file '" .. config_file .. "' not found, can't run command")
-  end
-
-  local state = require("confiture.internal").read_configuration_file(config_file)
+  local state = confiture.get_state(true)
 
   if state == nil then return end -- parsing error
 
@@ -164,7 +232,7 @@ function confiture.command_launcher(cmd, cmd_type)
   end
 
   if cmd_type == "default" then
-    if cmd == "build"  or cmd == "run" then -- build and run are special
+    if cmd == "build" or cmd == "run" then -- build and run are special
       return confiture[cmd](state)
     else
       vim.api.nvim_command(":! " .. state.commands[cmd])
@@ -182,7 +250,7 @@ function confiture.command_launcher(cmd, cmd_type)
   elseif cmd_type == "terminal" then
     run_cmd_in_nvim_term(state.commands[cmd])
   else
-      return utils.warn('Inernal error: unknow cmd_type:' .. cmd_type)
+      return utils.warn('Internal error: unknow cmd_type:' .. cmd_type)
   end
 end
 
@@ -190,11 +258,7 @@ end
 -- ### Part of the public API ###
 -- ##############################
 function confiture.get_variable(var_name)
-  local config_file = vim.g.confiture_file_name
-
-  if not utils.file_exists(config_file) then return nil end
-
-  local state = require("confiture.internal").read_configuration_file(config_file)
+  local state = confiture.get_state(false)
 
   if not state then return nil end
 
@@ -202,11 +266,7 @@ function confiture.get_variable(var_name)
 end
 
 function confiture.get_command(var_name)
-  local config_file = vim.g.confiture_file_name
-
-  if not utils.file_exists(config_file) then return nil end
-
-  local state = require("confiture.internal").read_configuration_file(config_file)
+  local state = confiture.get_state(false)
 
   if not state then return nil end
 
@@ -223,16 +283,36 @@ function confiture.set_command(cmd, value)
   require("confiture.internal").replace_in_config_file(cmd, value, false)
 end
 
+-- synchronous build, return success as a boolean
 function confiture.build_and_return_success()
-  local config_file = vim.g.confiture_file_name
+  local state = confiture.get_state(true)
 
-  if not utils.file_exists(config_file) then return false end
+  if state == nil then return false end -- parsing error
 
-  local state = require("confiture.internal").read_configuration_file(config_file)
-
-  if not state then return false end
+  if state.commands.build == nil then
+    utils.warn('Command "build" undefined in configuration file')
+    return false
+  end
 
   return build_and_check_success(state)
 end
+
+-- async build, will exec the `on_success` callback is successful
+function confiture.async_build_and_exec_on_success(on_success)
+  local state = confiture.get_state(true)
+
+  if state == nil then return end -- parsing error
+
+  if state.commands.build == nil then
+    return utils.warn('Command "build" undefined in configuration file')
+  end
+
+  if not has_dispatch_plugin() then
+    return utils.warn("Can't dispatch command as tpope/vim-dispatch plugin not found")
+  end
+
+  confiture.internal_build_async_and_exec_callback(state, on_success)
+end
+
 
 return confiture
