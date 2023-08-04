@@ -242,6 +242,10 @@ function confiture.command_launcher(cmd, cmd_type)
       return utils.warn("Can't dispatch command as tpope/vim-dispatch plugin not found")
     end
 
+    if cmd == "build" then -- use the build wrapper instead of :Dispatch directly
+      return build_with(state.commands.build, state.variables.COMPILER, true)
+    end
+
     -- @Unsure: we could do a :AbortDispatch here to make sure the user is not
     -- running multiple build commands that may be conflicting, but as we still
     -- want the user to be able do dispatch multiple commands, so no
