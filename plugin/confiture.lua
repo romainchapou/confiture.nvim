@@ -1,13 +1,13 @@
 local function confiture_launch_default(cmd)
-  require("confiture").command_launcher(cmd.args, "default")
+  require("confiture.executor").command_launcher(cmd.args, "default")
 end
 
 local function confiture_launch_term(cmd)
-  require("confiture").command_launcher(cmd.args, "terminal")
+  require("confiture.executor").command_launcher(cmd.args, "terminal")
 end
 
 local function confiture_launch_dispatch(cmd)
-  require("confiture").command_launcher(cmd.args, "dispatch")
+  require("confiture.executor").command_launcher(cmd.args, "dispatch")
 end
 
 

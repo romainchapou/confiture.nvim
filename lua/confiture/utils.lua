@@ -10,4 +10,9 @@ function utils.file_exists(file)
   return f ~= nil
 end
 
+function utils.has_dispatch_plugin()
+  return vim.fn.exists(":AbortDispatch") == 2
+end
+
+
 return utils
