@@ -50,11 +50,26 @@ end
 --      variable_name : "string value"
 -- or:
 --      variable_name : boolean_value
-local function parse_command_or_var_and_add_to_state(tokens, state_to_update)
+local function parse_command_or_var_and_add_to_state(tokens, state_to_update, override_data)
   local first_token_type = tokens[1].type
 
   if first_token_type ~= "command" and first_token_type ~= "variable" then
-    return "not a command or variable definition (first token of type " .. first_token_type
+    return "not a command or variable definition (first token of type " .. first_token_type .. ")"
+  end
+
+  -- skip this line if var/cmd in override_data
+  if override_data ~= nil then
+    if first_token_type == "command" and override_data.cmd ~= nil then
+      if tokens[1].value == override_data.cmd.name then
+        return
+      end
+    end
+
+    if first_token_type == "variable" and override_data.var ~= nil then
+      if tokens[1].value == override_data.var.name then
+        return
+      end
+    end
   end
 
   if not tokens[2] or tokens[2].type ~= "separator" then
@@ -123,7 +138,7 @@ end
 
 
 -- 'config_file' supposed to exist
-function internal.read_configuration_file(config_file)
+function internal.read_configuration_file(config_file, override_data)
   local state = {
     variables = {
       src_folder = vim.fn.getcwd(), -- @Cleanup: remove this ?
@@ -134,6 +149,16 @@ function internal.read_configuration_file(config_file)
 
     commands = {}
   }
+
+  if override_data ~= nil then
+    if override_data.var ~= nil then
+      state.variables[override_data.var.name] = override_data.var.value
+    end
+
+    if override_data.cmd ~= nil then
+      state.commands[override_data.cmd.name] = override_data.cmd.value
+    end
+  end
 
   local line_nb = 1
 
@@ -148,7 +173,7 @@ function internal.read_configuration_file(config_file)
     end
 
     if #parsed_tokens ~= 0 then -- skip empty/comment lines
-      local err_msg = parse_command_or_var_and_add_to_state(parsed_tokens, state)
+      local err_msg = parse_command_or_var_and_add_to_state(parsed_tokens, state, override_data)
 
       if err_msg then
         warn_parsing(line_nb, err_msg)
@@ -253,23 +278,29 @@ function internal.replace_in_config_file(key, value, is_replace_variable)
   -- Note: this should never return false and it is a bit expensive, but we
   -- have to be very cautious as we are overwriting a user config file
   local function new_file_is_coherent()
-    local new_state = internal.read_configuration_file(config_file_path)
+    local new_state_with_override
 
-    if new_state == nil then return false end
+    if is_replace_variable then
+      new_state_with_override = internal.read_configuration_file(config_file_path, {
+        var = { name = key, value = previous_state.variables[key]}
+      })
+    else
+      new_state_with_override = internal.read_configuration_file(config_file_path, {
+        cmd = { name = key, value = previous_state.commands[key]}
+      })
+    end
+
+    if new_state_with_override == nil then return false end
 
     for var, old_val in pairs(previous_state.variables) do
-      if new_state.variables[var] ~= old_val then
-        if not (is_replace_variable and var == key) then
-          return false
-        end
+      if new_state_with_override.variables[var] ~= old_val then
+        return false
       end
     end
 
     for cmd, old_val in pairs(previous_state.commands) do
-      if new_state.commands[cmd] ~= old_val then
-        if not (not is_replace_variable and cmd == key) then
-          return false
-        end
+      if new_state_with_override.commands[cmd] ~= old_val then
+        return false
       end
     end
 
