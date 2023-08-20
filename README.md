@@ -7,17 +7,27 @@ A simple way to save and launch your project specific commands.
 
 - Use the same simple vim commands (for example `:Confiture build_and_run`), or better, mappings, to launch build commands in all your projects.
 - Have your project specific commands stored with your project files and not in your `init.vim`/`init.lua`.
-- Have a `build_and_run` function to build with a call to `:make` and run a command if the build succeeds. 
+- Have a `build_and_run` function to build your project and run a command if the build succeeds. 
 - Support for asynchronous builds and commands using [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) and the integrated nvim terminal.
 - Keeping it simple: leverage standard neovim features, use as less vimrc configuration as possible, and provide a configuration file format that is easy to tweak.
 
 
 ## Installation
 
-Install with your package manager of choice, for example with [vim-plug](https://github.com/junegunn/vim-plug):
+Install with your package manager of choice, for example with [lazy.nvim](https://github.com/folke/lazy.nvim):
+
+```lua
+{
+    "romainchapou/confiture.nvim",
+    dependencies = "tpope/vim-dispatch", -- optional but highly recommended, for async support
+}
+```
+
+Or with [vim-plug](https://github.com/junegunn/vim-plug):
 
 ```vim
 Plug 'romainchapou/confiture.nvim'
+Plug 'tpope/vim-dispatch' " optional but highly recommended, for async support
 ```
 
 
@@ -77,7 +87,7 @@ Variables can be assigned a value with `:` and then used in other variables or i
 - If there is a `@build` command defined, launch the `build` command. Then, if it succeeded, launch the `run` command.
 - If there is no `@build` command defined, simply launch the `run` command.
 
-This will not use [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch).
+Async is also supported for this command if [tpope/vim-dispatch](https://github.com/tpope/vim-dispatch) is installed.
 
 
 ### Examples
@@ -119,6 +129,35 @@ build_folder: "build-${build_type}"
 ```
 
 
+### Public API
+
+Those functions can be useful if you want a more advanced used of confiture (do something special after a successful build, programmatically read/edit the `project.conf` file, ...). These can all be accessed using `require("confiture").func_name`.
+
+- `get_variable(var_name)`: read the (string) value of the variable `var_name` defined in the local `project.conf` file.
+- `get_command(cmd_name)`: read the (string) value of the command `cmd_name` defined in the local `project.conf` file.
+- `set_variable(var, value)`: set the (string) value of the variable `var` in the local `project.conf` file. NOTE: this will change the content of the `project.conf` file on the disk, the previous value of `var` will be lost.
+- `set_command(cmd, value)`: set the (string) value of the command `cmd` in the local `project.conf` file. NOTE: this will change the content of the `project.conf` file on the disk, the previous value of `cmd` will be lost.
+- `build_and_return_success()`: synchronously launch the build command and return true if the build was successful.
+- `async_build_and_exec_on_success(on_success)`: asynchronously launch the build command and, if successful, launch the `on_success` callback.
+
+
+#### API use example
+
+```lua
+local function my_build_and_debug()
+  vim.api.nvim_command("silent! wa")
+
+  -- set the local confiture variable "build_type" to "Debug" to use a debug build
+  require("confiture").set_variable("build_type", "Debug")
+
+  require("confiture").async_build_and_exec_on_success(function()
+    -- run debugger on success
+    require('dap').continue()
+  end)
+end
+```
+
+
 ### Advanced notes
 
 - When using the `${var}` syntax inside a command definition, `var` will be expanded with quotes. Inside a variable definition, `${var}` will be expanded **WITHOUT** quotes. For example, with the following configuration, `:Confiture my_command` is equivalent to `:!echo "ls "$HOME/my path/with spaces/my_dir/"`.
@@ -141,7 +180,7 @@ dir: "${root}/my_dir/"
 
 - The commands defined in your `project.conf` file will be directly executed by neovim commands. This has a few impacts:
     - `%` to specify the current file, and other vim shortcuts, will work.
-    - The shell used will be depend of your vim configuration (probably the one used to start vim). Note that if your shell happens to be something other than `bash` or `zsh`, the detection of a successful build used in `@build_and_run` may not work.
+    - The shell used will be depend of your vim configuration (probably the one used to start vim).
 
 - As commands and string variable values are given by `"` delimited strings, you have to escape the quotes (`\"`) if you want literal `"` characters in your variables/commands. Every other character will be interpreted as is, including any `\` not followed by a `"`. 
 
@@ -154,6 +193,5 @@ dir: "${root}/my_dir/"
 " Save all buffers (ignore unnamed ones) and run a command
 nnoremap <leader>c :silent! wa<cr>:ConfitureDispatch configure<cr>
 nnoremap <leader>b :silent! wa<cr>:Confiture build<cr>
-" double <cr> to skip the confirmation prompt
-nnoremap <leader><cr> :silent! wa<cr>:Confiture build_and_run<cr><cr>
+nnoremap <leader><cr> :silent! wa<cr>:Confiture build_and_run<cr>
 ```

@@ -2,7 +2,7 @@ local confiture = {}
 local utils = require("confiture.utils")
 
 --
--- The public API
+-- The public API, see the README for more details
 --
 
 

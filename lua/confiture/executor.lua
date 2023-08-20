@@ -4,9 +4,6 @@ local utils = require("confiture.utils")
 executor.has_pending_run = false
 executor.on_sucessful_build_callback = function() end
 
--- TODO @Cleanup: most of this file should be move to an other file, and only
--- the public api functions should remain
-
 local function has_error_in_quickfix_list()
   for entry_nb, entry in pairs(vim.api.nvim_call_function("getqflist", {})) do
     if entry_nb == 1 and string.match(entry.text, "^%s*command not found:") then
