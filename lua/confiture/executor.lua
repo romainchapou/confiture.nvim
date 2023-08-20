@@ -84,7 +84,7 @@ local function build_with(makeprg, compiler, should_dispatch)
   vim.api.nvim_set_option_value("makeprg", saved_makeprg, {scope = 'local'})
 end
 
-local function build_and_check_success(state)
+function executor.build_and_check_success(state)
   -- change 'shellpipe' to actually catch the error code of ':make' as explained here:
   -- https://vi.stackexchange.com/questions/26947/check-if-make-fails
   local shell = vim.api.nvim_get_option_value("shell", {scope = 'local'})
